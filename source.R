@@ -1,2 +1,2 @@
 library(shiny)
-runApp("../CRCGNportal")
+runApp("../CRCGNPortal")
