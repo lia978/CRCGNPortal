@@ -1,0 +1,6 @@
+
+{
+  "connectivity_dir": "/path/to/connectivity_dir",
+  "genesetenrich_dir": "/path/to/genesetenrich_dir",
+  "diffexp_dir": "/path/to/diffexp_dir"
+}
