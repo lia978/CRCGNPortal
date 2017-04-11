@@ -242,6 +242,7 @@ heatmapfiles<-gsub(".RDS", "",list.files(heatmapdir))
 filteropts<-c(list(premade_sets = c("all", "carc_pos", "carc_neg", "carc_pos_geno_pos",
   "carc_pos_geno_neg", "carc_neg_geno_pos", "carc_neg_geno_pos", "ss4", "ss5", "ss6", "q75rep_0.2",
   "q75rep_0.3", "D.Sherr")), chemicals)
+
 ##define app
 app<-shinyApp(
 
@@ -256,6 +257,30 @@ ui = shinyUI(navbarPage("CRCGN Portal",
       fluidRow(   
         column(6, offset = 0.1,
           helpText("Dataset details: 332 chemicals (128 liver carcinogens, 168 non-carcinogens, 36 others)"))
+      ),
+      fluidRow(   
+        column(6, offset = 0.1,
+          helpText("Chemical Annotation: list of CRCGN chemicals and associated annotation"))
+      ),
+      fluidRow(   
+        column(6, offset = 0.1,
+          helpText("Differential Expression: differentially expressed genes for chemical of interest"))
+      ),
+      fluidRow(   
+        column(6, offset = 0.1,
+          helpText("Gene set enrichment: gene set enrichment scores for chemical of interest"))
+      ),
+      fluidRow(   
+        column(6, offset = 0.1,
+          helpText("Connectivity: connectivity scores (WTCS) to cmap profiles for chemical of interest"))
+      ),
+      fluidRow(   
+        column(6, offset = 0.1,
+          helpText("Heatmap: visualization of geneset enrichment scores"))
+      ),
+            fluidRow(   
+        column(6, offset = 0.1,
+          helpText("Warning: some pages may take long to load! (heatmap, connectivity tabs..)"))
       )
     ),
 
@@ -379,7 +404,8 @@ server = shinyServer(function(input, output) {
     get_chemical_description(input$chemical, pdat, datadir, tab)
     }, options = list(dom = ''))
 
-  output$result <- DT::renderDataTable({
+  output$result <- renderDataTable({
+  #DT::renderDataTable({
       get_connectivity(input$chemical, tab, 
         pdat,
         subset_fdat(fdat, input$celline, x.split), 
@@ -388,13 +414,14 @@ server = shinyServer(function(input, output) {
         "number" %in% input$filterbyinput, 
         c(input$numberthresleft, input$numberthresright)
         )
-    }, 
-    extensions = 'Buttons', 
-    server = FALSE,
-    options = list(dom = 'T<"clear">Blfrtip', 
-    pageLength = 10,
-    deferRender=FALSE, 
-    buttons=c('copy','csv','print')))
+    }#, 
+    #extensions = 'Buttons', 
+    #server = FALSE,
+    #options = list(dom = 'T<"clear">Blfrtip', 
+    #pageLength = 10,
+    #deferRender=FALSE, 
+    #buttons=c('copy','csv','print'))
+  )
 
   output$gsproj_result <- DT::renderDataTable({
       eset<-get_gsproj(input$chemical_gs, gslist, tab, input$gsname_gs, input$gsmethod_gs)
