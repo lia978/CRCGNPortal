@@ -174,6 +174,16 @@ filtereset<-function(eset, filteropt, tab){
     eset<-eset[, eset$carc_liv_final %in% "NEGATIVE" & eset$Genotoxicity %in% "NEGATIVE"]
   else if (filteropt %in% "D.Sherr")
     eset<-eset[, grep("collaborator_David_Sherr", eset$source)]
+  else if (filteropt %in% "ss4")
+    eset<-eset[, eset$distil_ss > 4]
+  else if (filteropt %in% "ss5")
+    eset<-eset[, eset$distil_ss > 5]
+  else if (filteropt %in% "ss6")
+    eset<-eset[, eset$distil_ss > 6]
+  else if (filteropt %in% "q75rep_0.2")
+    eset<-eset[, eset$q75rep > 0.2]
+  else if (filteropt %in% "q75rep_0.3")
+    eset<-eset[, eset$q75rep > 0.3]
   else 
     eset<-eset[, eset$BUID %in% get_BUID(filteropt, tab)]
   return(eset)
@@ -229,7 +239,8 @@ heatmapdir<-dirs$heatmap_dir
 heatmapfiles<-gsub(".RDS", "",list.files(heatmapdir))
 
 filteropts<-c(list(premade_sets = c("all", "carc_pos", "carc_neg", "carc_pos_geno_pos",
-  "carc_pos_geno_neg", "carc_neg_geno_pos", "carc_neg_geno_pos", "D.Sherr")), chemicals)
+  "carc_pos_geno_neg", "carc_neg_geno_pos", "carc_neg_geno_pos", "ss4", "ss5", "ss6", "q75rep_0.2",
+  "q75rep_0.3", "D.Sherr")), chemicals)
 ##define app
 app<-shinyApp(
 
