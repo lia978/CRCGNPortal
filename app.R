@@ -204,7 +204,8 @@ chemannot<-readRDS(file = dirs$chemannotation_filename)
 deeset<-readRDS(dirs$diffexp_filename)
 
 ##load data for GeneSetEnrichment tab
-gsnames<-list(c2.reactome = "gsscores_c2.cp.reactome.v5.0.annotated", 
+gsnames<-list(#c2.reactome = "gsscores_c2.cp.reactome.v5.0.annotated", 
+  c2.reactome = "gsscores_c2.cp.reactome.v5.0", 
   hallmark = "gsscores_h.all.v5.0")
 gsmethods<-c("gsproj", "gsva", "ssgsea", "zscore")
 gsdir<-dirs$genesetenrich_dir
