@@ -5,6 +5,7 @@ library(rjson)
 library(DT)
 library(CBMRtools)
 
+
 #get top and bottom matches for given eset of connectivity scores
 summarize_eset<-function(mat, 
   summarize.func = c("mean", "median", "max", "min"),
@@ -194,6 +195,16 @@ subset_names<-function(x,n){
   else return(x)
 }
 
+get_morpheus_link<-function(url = "Achilles_QC_v2.4.3.rnai.Gs.gct", 
+  domain = "//s3.amazonaws.com/data.clue.io/morpheus"){
+
+  url = paste(domain, "/", url, sep = "")
+  url = paste("{\"dataset\":", "\"", url, "\"}", sep ="")
+  url = URLencode(URL = url)
+  url = paste("https://software.broadinstitute.org/morpheus/?json=", url, sep = "")
+  return(url)
+}
+
 ##load data dirs
 dirs<-fromJSON(file = "datadirs.json")
 
@@ -242,6 +253,10 @@ heatmapfiles<-gsub(".RDS", "",list.files(heatmapdir))
 filteropts<-c(list(premade_sets = c("all", "carc_pos", "carc_neg", "carc_pos_geno_pos",
   "carc_pos_geno_neg", "carc_neg_geno_pos", "carc_neg_geno_pos", "ss4", "ss5", "ss6", "q75rep_0.2",
   "q75rep_0.3", "D.Sherr")), chemicals)
+
+domain<-"//s3.amazonaws.com/data.clue.io/morpheus"
+
+
 
 ##define app
 app<-shinyApp(
@@ -373,7 +388,13 @@ ui = shinyUI(navbarPage("CRCGN Portal",
         plotOutput("heatmap_result")
 
       )
-    )
+    ),
+    tabPanel("Morpheus test",
+      selectInput("gctfile", "GCT file", c("Achilles_QC_v2.4.3.rnai.Gs.gct")),
+      #htmlOutput("morpheus_result")
+      htmlOutput("morpheus_result_link"),
+      htmlOutput("morpheus_result_embedded")
+      )
 	)),
 
 server = shinyServer(function(input, output) {
@@ -404,7 +425,7 @@ server = shinyServer(function(input, output) {
     get_chemical_description(input$chemical, pdat, datadir, tab)
     }, options = list(dom = ''))
 
-  output$result <- renderDataTable({
+  output$result <- DT::renderDataTable({
   #DT::renderDataTable({
       get_connectivity(input$chemical, tab, 
         pdat,
@@ -414,12 +435,11 @@ server = shinyServer(function(input, output) {
         "number" %in% input$filterbyinput, 
         c(input$numberthresleft, input$numberthresright)
         )
-    }#, 
+    },   
     #extensions = 'Buttons', 
-    #server = FALSE,
-    #options = list(dom = 'T<"clear">Blfrtip', 
-    #pageLength = 10,
-    #deferRender=FALSE, 
+    server = TRUE,
+    options = list(#dom = 'T<"clear">lfrtip', 
+    pageLength = 10)
     #buttons=c('copy','csv','print'))
   )
 
@@ -520,7 +540,21 @@ server = shinyServer(function(input, output) {
         ysizelab = 7,
         xright = 0.18)
       return(p)
-  })
+  }, width = 1000, height = 600)
+
+  output$morpheus_result_link<-renderText({
+      paste(c('<a target="_blank" href="',
+      get_morpheus_link(url =input$gctfile, 
+        domain = "//s3.amazonaws.com/data.clue.io/morpheus"),
+        '">', 'click here to open in new tab', '</a>'), sep = "")
+      })
+
+  output$morpheus_result_embedded<-renderText({
+      paste(c('<iframe width ="1200" height ="750" src="',
+      get_morpheus_link(url =input$gctfile, 
+        domain = domain),
+        '">', '</iframe>'), sep = "")
+      })
 
 })
 
