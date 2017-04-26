@@ -212,6 +212,12 @@ get_heatmap_gct<-function(ds, dsmap, method, domain){
 
 }
 
+get_heatmap_eset<-function(ds, dsmap, method){
+  dsname<-dsmap[[ds]]
+  res<-paste(dsname, "_", method, ".RDS", sep = "")
+  return(res)
+}
+
 ##load data dirs
 dirs<-fromJSON(file = "datadirs.json")
 
@@ -269,7 +275,6 @@ dsmap<-list(Hallmark="gsscores_h.all.v5.0",
 
 gctfiles<-names(dsmap)
 gctmethods<-c("gsproj", "gsva", "ssgsea", "zscore")
-
 
 ##define app
 app<-shinyApp(
@@ -402,9 +407,9 @@ ui = shinyUI(navbarPage("CRCGN Portal",
 
     tabPanel("Heatmap (static)",
       fluidPage(
-        fluidRow(
-        column(3, selectInput("heatmapfile", "Dataset", heatmapfiles, 
-          selected = "gsscores_h.all.v5.0_gsproj")),
+        fluidRow(         
+        column(3, selectInput("gsfile_heatmap", "Dataset:", gctfiles)),
+        column(2, selectInput("gsmethod_heatmap", "Projection Method:", gctmethods)), 
         column(3, selectInput("filteropt", "Filter", filteropts, 
           selected = "2,6-Dinitrotoluene"))),
         plotOutput("heatmap_result")
@@ -442,7 +447,6 @@ server = shinyServer(function(input, output) {
     }, options = list(dom = ''))
 
   output$result <- DT::renderDataTable({
-  #DT::renderDataTable({
       get_connectivity(input$chemical, tab, 
         pdat,
         subset_fdat(fdat, input$celline, x.split), 
@@ -509,11 +513,11 @@ server = shinyServer(function(input, output) {
     buttons=c('copy','csv','print')))
 
   output$heatmap_result<-renderPlot({
-      outfile<-paste(heatmapdir, "/", input$heatmapfile, ".RDS", sep = "")
+      outfileheader<-get_heatmap_eset(ds = input$gsfile_heatmap, dsmap = dsmap, method = input$gsmethod_heatmap)
+      outfile<-paste(heatmapdir, "/", outfileheader, sep = "")
       eset<-readRDS(outfile)
       eset<-filtereset(eset, input$filteropt, tab)
 
-    
       cns<-as.character(sapply(as.character(eset$Chemical.name), 
         function(i) subset_names(i,30)))
       cns<-make.unique(cns) #in case truncation produces non-unique ids
