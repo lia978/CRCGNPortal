@@ -175,6 +175,8 @@ filtereset<-function(eset, filteropt, tab){
     eset<-eset[, eset$carc_liv_final %in% "NEGATIVE" & eset$Genotoxicity %in% "NEGATIVE"]
   else if (filteropt %in% "D.Sherr")
     eset<-eset[, grep("collaborator_David_Sherr", eset$source)]
+  else if (filteropt %in% "J.Schlezinger")
+    eset<-eset[, grep("collaborator_J_Schlezinger", eset$source)]
   else if (filteropt %in% "ss4")
     eset<-eset[, eset$distil_ss > 4]
   else if (filteropt %in% "ss5")
@@ -195,14 +197,19 @@ subset_names<-function(x,n){
   else return(x)
 }
 
-get_morpheus_link<-function(url = "Achilles_QC_v2.4.3.rnai.Gs.gct", 
-  domain = "//s3.amazonaws.com/data.clue.io/morpheus"){
+get_morpheus_link<-function(url, domain){
 
   url = paste(domain, "/", url, sep = "")
   url = paste("{\"dataset\":", "\"", url, "\"}", sep ="")
   url = URLencode(URL = url)
   url = paste("https://software.broadinstitute.org/morpheus/?json=", url, sep = "")
   return(url)
+}
+
+get_heatmap_gct<-function(ds, dsmap, method, domain){
+  dsname<-dsmap[[ds]]
+  url<-paste(dsname, "_", method, ".gct", sep = "")
+
 }
 
 ##load data dirs
@@ -247,15 +254,21 @@ cellines<-c("all",get_cellines(fdat))
 summarizefuncs<-c("max", "median", "mean", "min")
 
 #directory of heatmap data files
-heatmapdir<-dirs$heatmap_dir
+heatmapdir<-dirs$genesetenrich_dir
 heatmapfiles<-gsub(".RDS", "",list.files(heatmapdir))
 
 filteropts<-c(list(premade_sets = c("all", "carc_pos", "carc_neg", "carc_pos_geno_pos",
   "carc_pos_geno_neg", "carc_neg_geno_pos", "carc_neg_geno_pos", "ss4", "ss5", "ss6", "q75rep_0.2",
-  "q75rep_0.3", "D.Sherr")), chemicals)
+  "q75rep_0.3", "D.Sherr", "J.Schlezinger")), chemicals)
 
-domain<-"//s3.amazonaws.com/data.clue.io/morpheus"
+domain<-dirs$gct_dir
 
+dsmap<-list(Hallmark="gsscores_h.all.v5.0",
+    C2="gsscores_c2.cp.reactome.v5.0", 
+    NURSA="gsscores_nursa_consensome_Cbyfdrvalue_0.01.gmt")
+
+gctfiles<-names(dsmap)
+gctmethods<-c("gsproj", "gsva", "ssgsea", "zscore")
 
 
 ##define app
@@ -378,7 +391,16 @@ ui = shinyUI(navbarPage("CRCGN Portal",
         dataTableOutput("result")
       )
     ),
-    tabPanel("Heatmaps",
+
+    tabPanel("Heatmap (interactive)",
+      fluidRow(
+        column(3, selectInput("gctfile", "Dataset:", gctfiles)),
+        column(2, selectInput("gctmethod", "Projection Method:", gctmethods))),
+      htmlOutput("morpheus_result_link"),
+      htmlOutput("morpheus_result_embedded")
+      ),
+
+    tabPanel("Heatmap (static)",
       fluidPage(
         fluidRow(
         column(3, selectInput("heatmapfile", "Dataset", heatmapfiles, 
@@ -388,13 +410,7 @@ ui = shinyUI(navbarPage("CRCGN Portal",
         plotOutput("heatmap_result")
 
       )
-    ),
-    tabPanel("Morpheus test",
-      selectInput("gctfile", "GCT file", c("Achilles_QC_v2.4.3.rnai.Gs.gct")),
-      #htmlOutput("morpheus_result")
-      htmlOutput("morpheus_result_link"),
-      htmlOutput("morpheus_result_embedded")
-      )
+    )
 	)),
 
 server = shinyServer(function(input, output) {
@@ -544,14 +560,16 @@ server = shinyServer(function(input, output) {
 
   output$morpheus_result_link<-renderText({
       paste(c('<a target="_blank" href="',
-      get_morpheus_link(url =input$gctfile, 
-        domain = "//s3.amazonaws.com/data.clue.io/morpheus"),
+      get_morpheus_link(url =get_heatmap_gct(ds=input$gctfile, dsmap = dsmap, 
+          method = input$gctmethod), 
+        domain = domain),
         '">', 'click here to open in new tab', '</a>'), sep = "")
       })
 
   output$morpheus_result_embedded<-renderText({
       paste(c('<iframe width ="1200" height ="750" src="',
-      get_morpheus_link(url =input$gctfile, 
+      get_morpheus_link(url = get_heatmap_gct(ds=input$gctfile, dsmap = dsmap, 
+          method = input$gctmethod), 
         domain = domain),
         '">', '</iframe>'), sep = "")
       })
