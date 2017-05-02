@@ -4,6 +4,7 @@ library(data.table)
 library(rjson)
 library(DT)
 library(CBMRtools)
+library(shinyBS)
 
 
 #get top and bottom matches for given eset of connectivity scores
@@ -35,41 +36,45 @@ summarize_eset<-function(mat,
   return(list(inds = inds, scores = x[inds]))
 } 
 
-#wrapper to retrieve top hits from an eset
-get_connectivity<-function(input, tab, 
-  pdat,fdat, 
-  summarize.func = c("mean", "median", "max", "min"),
-  do.scorecutoff = TRUE, scorecutoff = c(-0.6, 0.6), 
-  do.nmarkers = TRUE, nmarkers = c(100, 100)){
-  
+
+get_gutc<-function(input, tab, header, datlist, sort.by){
   i<-get_BUID(input, tab)
-  mat<-get_mat(i, datadir)
-  #subset mat to rows that are in fdat
-  inds.keep<-match(rownames(fdat), rownames(mat))
-  mat<-mat[inds.keep, ]
-  mat.cols<-round(pdat[match(colnames(mat), rownames(pdat)),"pert_dose"])
-  colnames(mat)<-paste("WTCS_dose", mat.cols, sep = "")
-
-  res<-summarize_eset(mat, summarize.func, do.scorecutoff, scorecutoff,
-    do.nmarkers, nmarkers)
-
-  res.ind<-res$inds
-  res.scores<-res$scores
-  tab<-cbind(fdat[res.ind,], summaryscore=res.scores, mat[res.ind,])
-  tab<-data.table(tab)
+  tab<-datlist[[header]][[i]]
+  tab<-clean_gutc(tab, sort.by)
+  tab<-data.table.round(tab)
+  return(tab)
 }
 
-get_chemical_description<-function(input, pdat, 
-  datadir, tab,
+capitalize <- function(x) {
+  s <- strsplit(x, " ")[[1]]
+  paste(toupper(substring(s, 1,1)), substring(s, 2),
+      sep="", collapse=" ")
+}
+
+clean_gutc<-function(tab, col){
+  if("pert_idose" %in% colnames(tab))
+    tab[, "pert_idose"]<-gsub("<fd><fd>", "u", tab[, "pert_idose"])
+  
+
+  colmatch<-paste("score_", capitalize(col), sep = "")
+  scores<-tab[, colmatch]
+  scores.dir<-sapply(scores, function(i){
+    if(i>0) return("up")
+    else return("down")
+    })
+  tab$summaryscore<-scores
+  tab$direction<-as.character(scores.dir)
+  cols_first<-c("id", "summaryscore", "direction")
+  cols_others<-setdiff(colnames(tab), cols_first)
+  tab[, c(cols_first, cols_others)]
+}
+
+get_chemical_description<-function(input, 
+  tab,
   cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final")){
   i<-get_BUID(input, tab)
-  mat<-get_mat(i, datadir)
-  res<-pdat[which(rownames(pdat) %in% colnames(mat)),cols.keep]
-  return(data.table(res[1,]))
-}
-
-get_mat<-function(i, datadir){
-  return(readRDS(paste(datadir, "/", i, ".RDS", sep = "")))
+  res<-tab[tab$BUID %in% i, cols.keep]
+  return(data.table.round(res[1,]))
 }
 
 subset_fdat<-function(fdat, keyword, x.split){
@@ -107,11 +112,11 @@ summarize_gsproj<-function(eset, order.col = "median"){
   colnames(res)<-c("min","Q1", "median", "mean","Q3","max")
   
   mat<-exprs(eset)
-  colnames(mat)<-paste("gsscore",round(pData(eset)$pert_dose), sep = "")
+  colnames(mat)<-paste("gsscore_",pData(eset)$pert_idose, sep = "")
 
   res<-cbind(rowIDs = rownames(res), fData(eset), summaryscore = res[,order.col], mat)
   res<-res[order(res$summaryscore, decreasing = TRUE),, drop = FALSE]
-  res<-data.table(res)
+  res<-data.table.round(res)
   return(res)
 }
 
@@ -135,7 +140,8 @@ get_gsproj_list<-function(gsnames, gsmethods, gsdir){
   return(res)
 }
 
-get_de<-function(input, tab, eset, landmark = FALSE, do.scorecutoff = TRUE, scorecutoff = c(-2, 2), 
+get_de<-function(input, tab, 
+  eset, landmark = FALSE, do.scorecutoff = TRUE, scorecutoff = c(-2, 2), 
   do.nmarkers = TRUE, nmarkers = c(100, 100),
   summarize.func = c("mean", "median", "max", "min")){
   i<-get_BUID(input, tab)
@@ -148,14 +154,14 @@ get_de<-function(input, tab, eset, landmark = FALSE, do.scorecutoff = TRUE, scor
   fdat<-fData(eset)[, c("id", "pr_gene_symbol", "pr_is_lmark")]
   pdat<-pData(eset)
 
-  colnames(mat)<-paste("modz_dose", round(pdat$pert_dose), sep = "")
+  colnames(mat)<-paste("modz_", pdat$pert_idose, sep = "")
   res<-summarize_eset(mat, summarize.func, do.scorecutoff, scorecutoff,
     do.nmarkers, nmarkers)
 
   res.ind<-res$inds
   res.scores<-res$scores
   tab<-cbind(fdat[res.ind,, drop = FALSE], summaryscore=res.scores, mat[res.ind,, drop = FALSE])
-  tab<-data.table(tab)
+  tab<-data.table.round(tab)
 }
 
 filtereset<-function(eset, filteropt, tab){
@@ -183,10 +189,16 @@ filtereset<-function(eset, filteropt, tab){
     eset<-eset[, eset$distil_ss > 5]
   else if (filteropt %in% "ss6")
     eset<-eset[, eset$distil_ss > 6]
-  else if (filteropt %in% "q75rep_0.2")
+  else if (filteropt %in% "q75rep0.2")
     eset<-eset[, eset$q75rep > 0.2]
-  else if (filteropt %in% "q75rep_0.3")
+  else if (filteropt %in% "q75rep0.3")
     eset<-eset[, eset$q75rep > 0.3]
+  else if (filteropt %in% "tas0.2")
+    eset<-eset[, eset$tas > 0.2]
+  else if (filteropt %in% "tas0.4")
+    eset<-eset[, eset$tas > 0.4]
+  else if (filteropt %in% "tas0.6")
+   eset<-eset[, eset$tas > 0.6]
   else 
     eset<-eset[, eset$BUID %in% get_BUID(filteropt, tab)]
   return(eset)
@@ -218,6 +230,17 @@ get_heatmap_eset<-function(ds, dsmap, method){
   return(res)
 }
 
+data.table.round<-function(dt, digits = 4){
+
+  cols<-sapply(colnames(dt), function(i) is.numeric(dt[,i]))
+  cols<-names(which(cols))
+
+  for(i in cols){
+    dt[,i]<-round(dt[,i], digits)
+  }
+  dt<-data.table(dt)
+}
+
 ##load data dirs
 dirs<-fromJSON(file = "datadirs.json")
 
@@ -227,36 +250,10 @@ chemannot<-readRDS(file = dirs$chemannotation_filename)
 ##load data for Differential Expression tab
 deeset<-readRDS(dirs$diffexp_filename)
 
-##load data for GeneSetEnrichment tab
-gsnames<-list(#c2.reactome = "gsscores_c2.cp.reactome.v5.0.annotated", 
-  c2.reactome = "gsscores_c2.cp.reactome.v5.0", 
-  hallmark = "gsscores_h.all.v5.0")
-gsmethods<-c("gsproj", "gsva", "ssgsea", "zscore")
-gsdir<-dirs$genesetenrich_dir
-gslist<-get_gsproj_list(gsnames, gsmethods, gsdir)
-gssort<-c("min","Q1", "median", "mean","Q3","max")
+#chemical selection dropdown
+chemicals<-get_ids_pdat(chemannot)
 
-##load data for Connectivity tab
-dir_connectivity<-dirs$connectivity_dir
-datadir<-paste(dir_connectivity, "/expression", sep = "")
-pdat<-readRDS(file = paste(dir_connectivity, "/", grep("pdat", list.files(dir_connectivity), value = T)[1], sep = ""))
-fdat<-readRDS(file = paste(dir_connectivity, "/", grep("fdat", list.files(dir_connectivity), value = T)[1], sep = ""))
-
-ids<-list.files(datadir)
-ids<-gsub(".RDS", "", ids)
-pdat<-pdat[pdat$BUID %in% ids,]
-
-cols<-c("BUID", "Chemical.name", "CAS")
-tab<-unique(pdat[, cols])
-chemicals<-get_ids_pdat(pdat)
-
-
-x<-as.character(fdat$id)
-#get cell line associated with fdat$id
-x.split<-unlist(lapply(x, function(i){strsplit(i, split = "_")[[1]][2]})) 
-
-#unique cell lines
-cellines<-c("all",get_cellines(fdat))
+#summarization function
 summarizefuncs<-c("max", "median", "mean", "min")
 
 #directory of heatmap data files
@@ -264,8 +261,8 @@ heatmapdir<-dirs$genesetenrich_dir
 heatmapfiles<-gsub(".RDS", "",list.files(heatmapdir))
 
 filteropts<-c(list(premade_sets = c("all", "carc_pos", "carc_neg", "carc_pos_geno_pos",
-  "carc_pos_geno_neg", "carc_neg_geno_pos", "carc_neg_geno_pos", "ss4", "ss5", "ss6", "q75rep_0.2",
-  "q75rep_0.3", "D.Sherr", "J.Schlezinger")), chemicals)
+  "carc_pos_geno_neg", "carc_neg_geno_pos", "carc_neg_geno_pos", "ss4", "ss5", "ss6", "q75rep0.2",
+  "q75rep0.3", "tas0.2", "tas0.4", "tas0.6", "D.Sherr", "J.Schlezinger")), chemicals)
 
 domain<-dirs$gct_dir
 
@@ -276,44 +273,70 @@ dsmap<-list(Hallmark="gsscores_h.all.v5.0",
 gctfiles<-names(dsmap)
 gctmethods<-c("gsproj", "gsva", "ssgsea", "zscore")
 
+##load data for GeneSetEnrichment tab
+gsnames<-dsmap
+gsmethods<-gctmethods
+gsdir<-dirs$genesetenrich_dir
+gslist<-get_gsproj_list(gsnames, gsmethods, gsdir)
+gssort<-c("min","Q1", "median", "mean","Q3","max")
+
+
+##gutc data
+gutcdir<-dirs$gutc_dir
+gutcfiles<-list.files(gutcdir)
+gutcheaders<-gsub(".RDS", "", gutcfiles)
+gutcobjects<-lapply(gutcfiles, function(i){
+  readRDS(paste(gutcdir, "/", i, sep = ""))
+  })
+names(gutcobjects)<-gutcheaders
+
+#tooltip texts
+helptextgutc<-HTML(paste("cs: raw weighted connectivity scores",
+              "ns: normalized scores",
+              "pcl: PCL (perturbational classes)", 
+              "pert: perturbagen",
+              "cell: cell line level",
+              "summary: cell line-summarized level", sep="<br/>"))
+
+helptextgsname<-HTML(paste("Hallmark: MSigDB Hallmark Pathways (v5.0)",
+              "C2: MSigDB C2 reactome Pathways (v5.0)",
+              "NURSA: Nuclear Receptor Signaling Atlas, consensome data for human", 
+               sep="<br/>"))
+
+helptextgsmethod<-HTML(paste("gsproj: GeneSetProjection for R package montilab:CBMRtools",
+              "gsva, ssgea, zscore: from R Bioconductor package GSVA", 
+               sep="<br/>"))
+
+helptextgsfilter<-HTML(paste("filter columns by premade sets or by chemical",
+              "premade sets:",
+              "carc_pos: liver carcinogens",
+              "carc_neg: non-carcinogens",
+              "carc_pos_geno_pos: genotoxic carcinogens",
+              "carc_pos_geno_neg: nongenotoxic carcinogens",
+              "carc_neg_geno_pos: nongenotoxic noncarcinogens",
+              "ssX: signal strength (within chemical) > X",
+              "q75repX: 75 percentile (within chemical) sample mod-Z correlation > X", 
+              "tasX: tas (transcriptional activity score, correlation normalized sigal strength) > X",
+              "D.Sherr: suggested by Dr. Sherr, mainly AHR ligands",
+              "J.Schlezinger: suggested by Dr. Schlezinger, mainly PPAR ligands",
+               sep="<br/>"))
+
+selectInputWithTooltip<-function(inputId, label, choices, bId, helptext, ...){
+  selectInput(inputId, tags$span(label,  
+            tipify(bsButton(bId, "?", style = "inverse", size = "extra-small"), 
+              helptext)),
+             choices, ...)}
+
 ##define app
 app<-shinyApp(
 
 ui = shinyUI(navbarPage("CRCGN Portal",
-
     tabPanel("About",
       titlePanel("CRCGN Liver Portal"),
       fluidRow(
-        column(6, offset = 0.1,
-          helpText("A portal for retrieving and visualising data related to the CRCGN liver project"))
-      ),
-      fluidRow(   
-        column(6, offset = 0.1,
-          helpText("Dataset details: 332 chemicals (128 liver carcinogens, 168 non-carcinogens, 36 others)"))
-      ),
-      fluidRow(   
-        column(6, offset = 0.1,
-          helpText("Chemical Annotation: list of CRCGN chemicals and associated annotation"))
-      ),
-      fluidRow(   
-        column(6, offset = 0.1,
-          helpText("Differential Expression: differentially expressed genes for chemical of interest"))
-      ),
-      fluidRow(   
-        column(6, offset = 0.1,
-          helpText("Gene set enrichment: gene set enrichment scores for chemical of interest"))
-      ),
-      fluidRow(   
-        column(6, offset = 0.1,
-          helpText("Connectivity: connectivity scores (WTCS) to cmap profiles for chemical of interest"))
-      ),
-      fluidRow(   
-        column(6, offset = 0.1,
-          helpText("Heatmap: visualization of geneset enrichment scores"))
-      ),
-            fluidRow(   
-        column(6, offset = 0.1,
-          helpText("Warning: some pages may take long to load! (heatmap, connectivity tabs..)"))
+        column(11,
+          includeMarkdown("introduction.Rmd")
+        )
       )
     ),
 
@@ -357,50 +380,31 @@ ui = shinyUI(navbarPage("CRCGN Portal",
       fluidPage(
         fluidRow(
           column(3, selectInput("chemical_gs", "CRCGN Chemical:", chemicals)),
-          column(2, selectInput("gsname_gs", "Gene set name:", names(gsnames))),
-          column(2, selectInput("gsmethod_gs", "Projection method:", gsmethods)),
+          column(2, 
+              selectInputWithTooltip(inputId = "gsname_gs", label = "Gene set name", 
+              choices = names(gsnames), bId = "Bgsname", helptext =helptextgsname)
+            ),
+          column(2,           
+            selectInputWithTooltip(inputId = "gsmethod_gs", label = "Projection method", 
+              choices = gsmethods, bId = "Bgsmethod", helptext =helptextgsmethod)
+          ),
           column(2, selectInput("summarize_gs", "Sort by:", gssort,selected = "median"))
           )
         ),
       DT::dataTableOutput("gsproj_result")
     ),
-    
-    tabPanel("Connectivity",
-      fluidPage(
-        #dropdown menus
-        fluidRow(
-        column(3, selectInput("chemical", "CRCGN Chemical:", chemicals)),
-        column(2, selectInput("celline", "CMAP cell line:", cellines)),
-        column(2, selectInput("summarizefunc", "Summarization:",summarizefuncs,
-          selected = "median")),
-        
-        column(1,checkboxGroupInput("filterbyinput", "Filter by:",
-                     c("score" = "score",
-                       "number" = "number"),
-                     selected = c("score", "number"))),
-        column(2,sliderInput("range", "score threshold", min = -1, max = 1, 
-          value = c(-0.3,0.3), step = 0.01)),
-        column(1,sliderInput("numberthresleft", "Num +",
-          min = 0, max = 1000, value = 50, ticks = FALSE, step = 10)),
-        column(1,sliderInput("numberthresright", "Num -",
-          min = 0, max = 1000, value = 50, ticks = FALSE, step = 10))
-        ),
-        # Table returned bshowing description for query chemical
-        dataTableOutput("chemical_description"),
-        tags$style(type="text/css", '#chemical_description tfoot {display:none;}'),
-
-        ##insert empty space
-        fluidRow(column(width = 1, offset = 0, style='padding:10px;')),
-
-        # Table returned showing connectivity scores for best matches
-        dataTableOutput("result")
-      )
-    ),
 
     tabPanel("Heatmap (interactive)",
       fluidRow(
-        column(3, selectInput("gctfile", "Dataset:", gctfiles)),
-        column(2, selectInput("gctmethod", "Projection Method:", gctmethods))),
+        column(3, 
+              selectInputWithTooltip(inputId = "gctfile", label = "Dataset", 
+              choices = gctfiles, bId = "Bgsnamegct", helptext =helptextgsname)
+          ),
+        column(2,
+              selectInputWithTooltip(inputId = "gctmethod", label = "Projection method", 
+              choices = gctmethods, bId = "Bgsmethodgct", helptext =helptextgsmethod)
+          )
+        ),
       htmlOutput("morpheus_result_link"),
       htmlOutput("morpheus_result_embedded")
       ),
@@ -408,20 +412,52 @@ ui = shinyUI(navbarPage("CRCGN Portal",
     tabPanel("Heatmap (static)",
       fluidPage(
         fluidRow(         
-        column(3, selectInput("gsfile_heatmap", "Dataset:", gctfiles)),
-        column(2, selectInput("gsmethod_heatmap", "Projection Method:", gctmethods)), 
-        column(3, selectInput("filteropt", "Filter", filteropts, 
-          selected = "2,6-Dinitrotoluene"))),
+        column(3, 
+              selectInputWithTooltip(inputId = "gsfile_heatmap", label = "Dataset", 
+              choices = gctfiles, bId = "Bgsnamegctstatic", helptext =helptextgsname)
+              ),
+        column(2, 
+              selectInputWithTooltip(inputId = "gsmethod_heatmap", label = "Projection method", 
+              choices = gctmethods, bId = "Bgsmethodgctstatic", helptext =helptextgsmethod)
+          ), 
+        column(3, 
+          selectInputWithTooltip(inputId = "filteropt", label = "Column Filter", 
+          choices = filteropts, 
+          selected = "ss6", bId = "Bgsfilterstatic", helptext = helptextgsfilter)
+          )
+        ),
         plotOutput("heatmap_result")
 
       )
-    )
+     ),
+
+     tabPanel("Connectivity",
+       fluidPage(
+         fluidRow(         
+          column(3, selectInput("chemical_gutc", "CRCGN Chemical:", chemicals)),
+          column(3,
+            selectInputWithTooltip(inputId = "header_gutc", label = "Dataset", 
+              choices = gutcheaders, bId = "Bgutc", helptext =helptextgutc)
+            ),
+          column(2, selectInput("summarize_gutc", "Sort by:", gssort, selected = "median"))
+         ),
+         dataTableOutput("chemical_description_gutc"),
+         tags$style(type="text/css", '#chemical_description_de tfoot {display:none;}'),
+
+         ##insert empty space
+         fluidRow(column(width = 1, offset = 0, style='padding:10px;')),
+
+         dataTableOutput("gutc_result")
+
+       )
+     )
+
 	)),
 
-server = shinyServer(function(input, output) {
+server = shinyServer(function(input, output, session) {
 
   output$chemannot_result<-DT::renderDataTable({
-    data.table(chemannot)
+    data.table.round(chemannot)
     },
     extensions = 'Buttons',
     server = FALSE,
@@ -442,29 +478,8 @@ server = shinyServer(function(input, output) {
       pageLength = 1000, lengthMenu = c(10,50,100,200,1000),
       buttons=c('copy','csv','print')))
 
-  output$chemical_description<-DT::renderDataTable({
-    get_chemical_description(input$chemical, pdat, datadir, tab)
-    }, options = list(dom = ''))
-
-  output$result <- DT::renderDataTable({
-      get_connectivity(input$chemical, tab, 
-        pdat,
-        subset_fdat(fdat, input$celline, x.split), 
-        input$summarizefunc, "score" %in% input$filterbyinput,
-        c(input$range[1], input$range[2]), 
-        "number" %in% input$filterbyinput, 
-        c(input$numberthresleft, input$numberthresright)
-        )
-    },   
-    #extensions = 'Buttons', 
-    server = TRUE,
-    options = list(#dom = 'T<"clear">lfrtip', 
-    pageLength = 10)
-    #buttons=c('copy','csv','print'))
-  )
-
   output$gsproj_result <- DT::renderDataTable({
-      eset<-get_gsproj(input$chemical_gs, gslist, tab, input$gsname_gs, input$gsmethod_gs)
+      eset<-get_gsproj(input$chemical_gs, gslist, chemannot, input$gsname_gs, input$gsmethod_gs)
       res<-summarize_gsproj(eset, order.col = input$summarize_gs)
       return(res)
     }, 
@@ -472,30 +487,37 @@ server = shinyServer(function(input, output) {
     server = FALSE,
     options = list (dom = 'T<"clear">Blfrtip',
       autoWidth = FALSE,
-      columnDefs = list(list(width = '100px', targets = list(2),
+      columnDefs = list(list(width = '100px', targets = list(2), className = 'dt-center',
           render = JS(
             "function(data, type, row, meta) {",
-            "console.log(data);console.log(type);console.log(row);console.log(meta)",
-            "return type === 'display' && data.length > 40 ?",
-            "'<span title=\"' + data + '\">' + data.substr(0, 40) + '...</span>' : data;",
+            "return type === 'display' && data.length > 30 ?",
+            "'<span title=\"' + data + '\">' + data.substr(0, 30) + '..</span>' : data;",
             "}")), 
       list(targets = list(1), visible = FALSE)
       ),
-      deferRender=FALSE,
-      scrollX=TRUE,scrollY=400,
+      deferRender=TRUE,
       scrollCollapse=TRUE,
-      pageLength = 100, lengthMenu = c(10,50,100,200),
+      pageLength = 10, lengthMenu = c(10,50,100,200,1000),
       buttons=c('copy','csv','print')
     )
-
   )
 
   output$chemical_description_de<-DT::renderDataTable({
-    get_chemical_description(input$chemical_de, pdat, datadir, tab)
+    get_chemical_description(input = input$chemical_de, 
+      tab = chemannot,
+      cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final"))
+
+    }, options = list(dom = ''))
+
+    output$chemical_description_gutc<-DT::renderDataTable({
+    get_chemical_description(input = input$chemical_gutc, 
+      tab = chemannot,
+      cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final"))
+
     }, options = list(dom = ''))
 
   output$result_de <- DT::renderDataTable({
-      get_de(input$chemical_de, tab, 
+      get_de(input$chemical_de, tab=chemannot, 
         eset = deeset, 
         landmark = input$landmark_de, 
         do.scorecutoff = "score" %in% input$filterbyinput_de, 
@@ -516,10 +538,10 @@ server = shinyServer(function(input, output) {
       outfileheader<-get_heatmap_eset(ds = input$gsfile_heatmap, dsmap = dsmap, method = input$gsmethod_heatmap)
       outfile<-paste(heatmapdir, "/", outfileheader, sep = "")
       eset<-readRDS(outfile)
-      eset<-filtereset(eset, input$filteropt, tab)
+      eset<-filtereset(eset, input$filteropt, chemannot)
 
       cns<-as.character(sapply(as.character(eset$Chemical.name), 
-        function(i) subset_names(i,30)))
+        function(i) subset_names(i,25)))
       cns<-make.unique(cns) #in case truncation produces non-unique ids
       colnames(eset)<-paste(cns, "_", eset$pert_dose_RANK, sep = "")
       hc<-clust_eset(eset)
@@ -533,7 +555,7 @@ server = shinyServer(function(input, output) {
         col_values = rev(gray.colors(6)),
         col_labels = 1:6))
       hmcolors<-function(...) scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, ...)
-      #xsize <- 50/ncol(eset)
+    
       ncols<-ncol(eset)
       xsize<-3
       if (ncols<500) 
@@ -571,12 +593,39 @@ server = shinyServer(function(input, output) {
       })
 
   output$morpheus_result_embedded<-renderText({
-      paste(c('<iframe width ="1200" height ="750" src="',
+      paste(c('<iframe width ="1200" height ="680" src="',
       get_morpheus_link(url = get_heatmap_gct(ds=input$gctfile, dsmap = dsmap, 
           method = input$gctmethod), 
         domain = domain),
         '">', '</iframe>'), sep = "")
       })
+
+   output$gutc_result <- DT::renderDataTable({
+       get_gutc(input = input$chemical_gutc, 
+        tab = chemannot, 
+        header = input$header_gutc, 
+        datlist = gutcobjects,
+        sort.by = input$summarize_gutc)
+     }, 
+    extensions = 'Buttons',
+    server = FALSE,
+    options = list (dom = 'T<"clear">Blfrtip',
+      autoWidth = FALSE,
+      columnDefs = list(list(width = '100px', targets = list(2),
+          render = JS(
+            "function(data, type, row, meta) {",
+            "console.log(data);console.log(type);console.log(row);console.log(meta)",
+            "return type === 'display' && data.length > 40 ?",
+            "'<span title=\"' + data + '\">' + data.substr(0, 40) + '...</span>' : data;",
+            "}")), 
+      list(targets = list(1), visible = TRUE)
+      ),
+      deferRender=FALSE,
+      scrollCollapse=TRUE,
+      pageLength = 10, lengthMenu = c(10,25,50),
+      buttons=c('copy','csv','print')
+   ))
+
 
 })
 

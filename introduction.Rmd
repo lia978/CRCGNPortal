@@ -1,0 +1,44 @@
+---
+title: "CRCGN Liver Portal"
+output:
+  html_document:
+  toc: true
+  theme: united
+---
+
+An interactive portal for retrieving and visualizing data from the CRCGN liver project
+
+### Dataset details
+
+This experiment uses 330 selected chemicals for in-vivo liver carcinogenicity testing, including 128 liver carcinogens, 168 non-carcinogens, and 34 miscellaneous chemicals (e.g. nuclear receptor ligands). Chemical carcinogenicity and genotoxicity annotations are based on the Carcinogenicity Potency Database ([CPDB](https://toxnet.nlm.nih.gov/cpdb/)), which is the result of tissue-specific long-term animal cancer tests in rodents. In the CRCGN project, each chemical is exposed to HEPG2 human liver cancer cell lines for 24 hours and the gene expression is assayed on the L1000 platform. Each chemical contains 6 dose profiles at 3 replicate samples pert dose (2 fold dilutions starting from the highest concentration of 40uM or 20uM). For each chemical and dose profile, the gene expression of 1000 landmark genes are measured as a moderated z-score (weighted collapsed z-score of the 3 replicate perturbational profiles with respect to the entire plate).
+
+### Chemical Annotation
+
+A table detailing the CRCGN liver chemicals and their associated annotation
+
+### Differential Expression
+
+A list of differential expressed genes for a given chemical of interest
+
+### Gene set enrichment
+
+Gene set enrichment scores for a given chemical of interest. Gene sets include the [MSigDB](http://software.broadinstitute.org/gsea/msigdb) collections (Hallmark, C2 reactome pathways), and gene targets of various nuclear receptors ([NURSA](https://www.nursa.org/nursa/transcriptomine/index.jsf)).
+
+### Heatmap (interactive)
+
+A heatmap visualizer to explore gene set enrichment results. For details, see [Morpheus](https://software.broadinstitute.org/morpheus/).
+
+### Heatmap (static)
+
+A static heatmap visualizer to explore gene set enrichment results, with option to subset samples to several premade chemical sets.
+
+### Connectivity
+
+Summarizes the similarity of CRCGN liver profiles to profiles in the CMAP database (containing ~9000 unique annotated perturbagens, 84 perturbagen classes). Results are filtered top 50 (highest connectivity) and bottom 50 (lowest connectivity), representing the top hits for signature concordance and signature reversal respectively. 
+
+
+---
+
+Credits: Amy Li, Stefano Monti, David Sherr, Broad Institute CMap team.
+
+Contact us at [ajli@bu.edu](mailto:ajli@bu.edu)
