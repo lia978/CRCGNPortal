@@ -1,6 +1,8 @@
 # CRCGNPortal
 
-Scripts for running interactive web portal for exploring CRCGN data
+This portal is currently hosted at: [http://carcinogenome.org:6444/](http://carcinogenome.org:6444/)
+
+Scripts for running interactive web portal for exploring CRCGN (Carcinogenome) data
 
 ## Instructions for running the app
 
