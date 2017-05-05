@@ -167,38 +167,42 @@ get_de<-function(input, tab,
 filtereset<-function(eset, filteropt, tab){
   if (filteropt %in% "all")
     eset <- eset
-  else if (filteropt %in% "carc_pos") 
+  else if (filteropt %in% "carcinogens") 
     eset<-eset[, eset$carc_liv_final %in% "POSITIVE"]
-  else if (filteropt %in% "carc_neg") 
+  else if (filteropt %in% "non-carcinogens") 
     eset<-eset[, eset$carc_liv_final %in% "NEGATIVE"]
-  else if (filteropt %in% "carc_pos_geno_pos") 
+  else if (filteropt %in% "genotoxic")
+    eset<-eset[, eset$Genotoxicity %in% "POSITIVE"]
+  else if (filteropt %in% "non-genotoxic")
+    eset<-eset[, eset$Genotoxicity %in% "NEGATIVE"]
+  else if (filteropt %in% "genotoxic carcinogens") 
     eset<-eset[, eset$carc_liv_final %in% "POSITIVE" & eset$Genotoxicity %in% "POSITIVE"]
-  else if (filteropt %in% "carc_pos_geno_neg") 
+  else if (filteropt %in% "nongenotoxic carcinogens") 
     eset<-eset[, eset$carc_liv_final %in% "POSITIVE" & eset$Genotoxicity %in% "NEGATIVE"]
-  else if (filteropt %in% "carc_neg_geno_pos") 
+  else if (filteropt %in% "genotoxic non-carcinogens") 
     eset<-eset[, eset$carc_liv_final %in% "NEGATIVE" & eset$Genotoxicity %in% "POSITIVE"]
-  else if (filteropt %in% "carc_neg_geno_neg") 
+  else if (filteropt %in% "non-genotoxic non-carcinogens") 
     eset<-eset[, eset$carc_liv_final %in% "NEGATIVE" & eset$Genotoxicity %in% "NEGATIVE"]
-  else if (filteropt %in% "D.Sherr")
+  else if (filteropt %in% "D. Sherr requested chemicals")
     eset<-eset[, grep("collaborator_David_Sherr", eset$source)]
-  else if (filteropt %in% "J.Schlezinger")
+  else if (filteropt %in% "J.Schlezinger requested chemicals")
     eset<-eset[, grep("collaborator_J_Schlezinger", eset$source)]
-  else if (filteropt %in% "ss4")
+  else if (filteropt %in% "signal strength > 4")
     eset<-eset[, eset$distil_ss > 4]
-  else if (filteropt %in% "ss5")
+  else if (filteropt %in% "signal strength > 5")
     eset<-eset[, eset$distil_ss > 5]
-  else if (filteropt %in% "ss6")
+  else if (filteropt %in% "signal strength > 6")
     eset<-eset[, eset$distil_ss > 6]
-  else if (filteropt %in% "q75rep0.2")
+  else if (filteropt %in% "q75 replicate correlation > 0.2")
     eset<-eset[, eset$q75rep > 0.2]
-  else if (filteropt %in% "q75rep0.3")
+  else if (filteropt %in% "q75 replicate correation > 0.3")
     eset<-eset[, eset$q75rep > 0.3]
-  else if (filteropt %in% "tas0.2")
+  else if (filteropt %in% "tas > 0.2")
     eset<-eset[, eset$tas > 0.2]
-  else if (filteropt %in% "tas0.4")
+  else if (filteropt %in% "tas > 0.4")
     eset<-eset[, eset$tas > 0.4]
-  else if (filteropt %in% "tas0.6")
-   eset<-eset[, eset$tas > 0.6]
+  else if (filteropt %in% "tas > 0.6")
+    eset<-eset[, eset$tas > 0.6]
   else 
     eset<-eset[, eset$BUID %in% get_BUID(filteropt, tab)]
   return(eset)
@@ -231,7 +235,6 @@ get_heatmap_eset<-function(ds, dsmap, method){
 }
 
 data.table.round<-function(dt, digits = 4){
-
   cols<-sapply(colnames(dt), function(i) is.numeric(dt[,i]))
   cols<-names(which(cols))
 
@@ -260,9 +263,18 @@ summarizefuncs<-c("max", "median", "mean", "min")
 heatmapdir<-dirs$genesetenrich_dir
 heatmapfiles<-gsub(".RDS", "",list.files(heatmapdir))
 
-filteropts<-c(list(premade_sets = c("all", "carc_pos", "carc_neg", "carc_pos_geno_pos",
-  "carc_pos_geno_neg", "carc_neg_geno_pos", "carc_neg_geno_pos", "ss4", "ss5", "ss6", "q75rep0.2",
-  "q75rep0.3", "tas0.2", "tas0.4", "tas0.6", "D.Sherr", "J.Schlezinger")), chemicals)
+
+premade_sets<-c("carcinogens", "non-carcinogens", "genotoxic", "non-genotoxic",
+  "genotoxic carcinogens", "nongenotoxic carcinogens",
+  "genotoxic non-carcinogens", "non-genotoxic non-carcinogens",
+  "D. Sherr requested chemicals", "J.Schlezinger requested chemicals",
+  "signal strength > 4", "signal strength > 5", "signal strength > 6",
+  "q75 replicate correlation > 0.2",
+  "q75 replicate correation > 0.3",
+  "tas > 0.2", "tas > 0.4", "tas > 0.6")
+
+
+filteropts<-c(list(premade_sets = premade_sets), chemicals)
 
 domain<-dirs$gct_dir
 
@@ -280,7 +292,6 @@ gsdir<-dirs$genesetenrich_dir
 gslist<-get_gsproj_list(gsnames, gsmethods, gsdir)
 gssort<-c("min","Q1", "median", "mean","Q3","max")
 
-
 ##gutc data
 gutcdir<-dirs$gutc_dir
 gutcfiles<-list.files(gutcdir)
@@ -292,10 +303,11 @@ names(gutcobjects)<-gutcheaders
 
 #tooltip texts
 helptextgutc<-HTML(paste("cs: raw weighted connectivity scores",
-              "ns: normalized scores",
+              "ns: normalized scores, accounts for cell-line and perturbational type",
+              "ps: percentile normalized scores[-100, 100]",
               "pcl: PCL (perturbational classes)", 
-              "pert: perturbagen",
-              "cell: cell line level",
+              "pert: perturbagen level",
+              "cell: cell-line level",
               "summary: cell line-summarized level", sep="<br/>"))
 
 helptextgsname<-HTML(paste("Hallmark: MSigDB Hallmark Pathways (v5.0)",
@@ -307,18 +319,12 @@ helptextgsmethod<-HTML(paste("gsproj: GeneSetProjection for R package montilab:C
               "gsva, ssgea, zscore: from R Bioconductor package GSVA", 
                sep="<br/>"))
 
+
 helptextgsfilter<-HTML(paste("filter columns by premade sets or by chemical",
               "premade sets:",
-              "carc_pos: liver carcinogens",
-              "carc_neg: non-carcinogens",
-              "carc_pos_geno_pos: genotoxic carcinogens",
-              "carc_pos_geno_neg: nongenotoxic carcinogens",
-              "carc_neg_geno_pos: nongenotoxic noncarcinogens",
-              "ssX: signal strength (within chemical) > X",
-              "q75repX: 75 percentile (within chemical) sample mod-Z correlation > X", 
-              "tasX: tas (transcriptional activity score, correlation normalized sigal strength) > X",
-              "D.Sherr: suggested by Dr. Sherr, mainly AHR ligands",
-              "J.Schlezinger: suggested by Dr. Schlezinger, mainly PPAR ligands",
+              "carcinogenicity/genotoxicity based on CPDB mouse and rats data",
+              "D. Sherr suggested chemicals: mainly AHR ligands",
+              "J. Schlezinger suggested chemicals: mainly PPAR ligands",
                sep="<br/>"))
 
 selectInputWithTooltip<-function(inputId, label, choices, bId, helptext, ...){
@@ -423,7 +429,7 @@ ui = shinyUI(navbarPage("CRCGN Portal",
         column(3, 
           selectInputWithTooltip(inputId = "filteropt", label = "Column Filter", 
           choices = filteropts, 
-          selected = "ss6", bId = "Bgsfilterstatic", helptext = helptextgsfilter)
+          selected = "signal strength > 6", bId = "Bgsfilterstatic", helptext = helptextgsfilter)
           )
         ),
         plotOutput("heatmap_result")
@@ -625,8 +631,6 @@ server = shinyServer(function(input, output, session) {
       pageLength = 10, lengthMenu = c(10,25,50),
       buttons=c('copy','csv','print')
    ))
-
-
 })
 
 )
