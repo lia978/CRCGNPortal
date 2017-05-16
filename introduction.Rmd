@@ -42,3 +42,7 @@ Summarizes the similarity of CRCGN liver profiles to profiles in the CMAP databa
 Credits: Amy Li, Stefano Monti, David Sherr, Broad Institute CMap team.
 
 Contact us at [ajli@bu.edu](mailto:ajli@bu.edu)
+
+This project is supported by Superfund Research Program at Boston University ([BUSRP](http://www.bu.edu/sph/research/research-landing-page/superfund-research-program-at-boston-university)), [NIH/LINCS](http://www.lincsproject.org), and [Art beCAUSE Breast Cancer Foundation](https://artbecause.org)
+
+

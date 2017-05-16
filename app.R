@@ -342,7 +342,8 @@ ui = shinyUI(navbarPage("CRCGN Portal",
       fluidRow(
         column(11,
           includeMarkdown("introduction.Rmd")
-        )
+        ),
+        img(src="logo.png", align = "left", width = 600)
       )
     ),
 
