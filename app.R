@@ -336,7 +336,10 @@ selectInputWithTooltip<-function(inputId, label, choices, bId, helptext, ...){
 ##define app
 app<-shinyApp(
 
-ui = shinyUI(navbarPage("CRCGN Portal",
+ui = shinyUI(
+  fluidPage(
+  tags$head(includeScript("google-analytics.js")),
+  navbarPage("CRCGN Portal",
     tabPanel("About",
       titlePanel("CRCGN Liver Portal"),
       fluidRow(
@@ -459,7 +462,7 @@ ui = shinyUI(navbarPage("CRCGN Portal",
        )
      )
 
-	)),
+	))),
 
 server = shinyServer(function(input, output, session) {
 
