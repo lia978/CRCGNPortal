@@ -1,6 +1,6 @@
 # CRCGNPortal
 
-This portal is currently hosted at: [http://carcinogenome.org:6444/](http://carcinogenome.org:6444/)
+This portal is currently hosted at: [http://carcinogenome.org](http://carcinogenome.org)
 
 Scripts for running interactive web portal for exploring CRCGN (Carcinogenome) data
 

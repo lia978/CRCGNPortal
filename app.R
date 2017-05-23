@@ -164,6 +164,36 @@ get_de<-function(input, tab,
   tab<-data.table.round(tab)
 }
 
+get_de_by_gene_hist<-function(input, eset){
+    rowid<-which(fData(eset)$pr_gene_symbol %in% input)[1]
+    x<-as.numeric(exprs(eset)[rowid,])
+    p.title<-paste("Distribution of mod Z-scores across samples for ", input, sep = "")
+    df<-data.frame(x = x)
+    p<-ggplot(df, aes(x = x))+ geom_histogram(binwidth = 0.2)+
+    xlab("moderated Z-score") + 
+    ylab("Count")+ 
+    ggtitle(p.title)+
+    theme_bw()+
+    theme(plot.title = element_text(hjust = 0.5))
+    return(p)
+}
+
+get_de_by_gene_table<-function(input, eset){
+    rowid<-which(fData(eset)$pr_gene_symbol %in% input)[1]
+    x<-as.numeric(exprs(eset)[rowid,])
+    pdat<-pData(eset)
+    cols<-c("sig_id", "Chemical.name", "CAS", "pert_idose", "pert_dose_RANK", "distil_ss", "distil_ss_RANK")
+    df<-cbind(pdat[, cols], modz = x)
+    df<-df[order(df$modz, decreasing = TRUE),]
+}
+
+get_de_by_gene_lm<-function(input, eset){
+   lms<-fData(eset)$pr_is_lmark
+   rowid<-which(fData(eset)$pr_gene_symbol %in% input)[1]
+   if(lms[rowid] %in% "Y") return(paste(input, " is a landmark gene", sep = ""))
+   else paste("Warning: ", input, " is an inferred gene!", sep = "")
+}
+
 filtereset<-function(eset, filteropt, tab){
   if (filteropt %in% "all")
     eset <- eset
@@ -214,7 +244,6 @@ subset_names<-function(x,n){
 }
 
 get_morpheus_link<-function(url, domain){
-
   url = paste(domain, "/", url, sep = "")
   url = paste("{\"dataset\":", "\"", url, "\"}", sep ="")
   url = URLencode(URL = url)
@@ -256,6 +285,9 @@ deeset<-readRDS(dirs$diffexp_filename)
 #chemical selection dropdown
 chemicals<-get_ids_pdat(chemannot)
 
+#genes selection dropdown
+genes<-unique(fData(deeset)$pr_gene_symbol)
+
 #summarization function
 summarizefuncs<-c("max", "median", "mean", "min")
 
@@ -272,7 +304,6 @@ premade_sets<-c("carcinogens", "non-carcinogens", "genotoxic", "non-genotoxic",
   "q75 replicate correlation > 0.2",
   "q75 replicate correation > 0.3",
   "tas > 0.2", "tas > 0.4", "tas > 0.6")
-
 
 filteropts<-c(list(premade_sets = premade_sets), chemicals)
 
@@ -356,33 +387,54 @@ ui = shinyUI(
 
     tabPanel("Differential Expression",
       fluidPage(
-        #dropdown menus
-        fluidRow(
-        column(3, selectInput("chemical_de", "CRCGN Chemical:", chemicals)),
-        column(2, checkboxInput("landmark_de", "Landmark only", value =FALSE)),
-        column(2, selectInput("summarizefunc_de", "Summarization:",summarizefuncs,
-          selected = "median")),
-        
-        column(1,checkboxGroupInput("filterbyinput_de", "Filter by:",
-                     c("score" = "score",
-                       "number" = "number"),
-                     selected = c("score", "number"))),
-        column(2,sliderInput("range_de", "score threshold", min = -10, max = 10, 
-          value = c(-2,2), step = 0.01)),
-        column(1,sliderInput("numberthresleft_de", "Num +",
-          min = 0, max = 1000, value = 10, ticks = FALSE, step = 10)),
-        column(1,sliderInput("numberthresright_de", "Num -",
-          min = 0, max = 1000, value = 10, ticks = FALSE, step = 10))
+        #search by chemical
+        radioButtons("detype", "Search Type", 
+          choices = c("by chemical", "by gene"), 
+          selected = "by chemical"),
+
+        conditionalPanel(
+          condition = "input.detype ==  'by chemical'",
+
+          #dropdown menus
+          fluidRow(
+            column(3, selectInput("chemical_de", "CRCGN Chemical:", chemicals)),
+            column(2, checkboxInput("landmark_de", "Landmark only", value =FALSE)),
+            column(2, selectInput("summarizefunc_de", "Summarization:",summarizefuncs,
+              selected = "median")),
+            
+            column(1,checkboxGroupInput("filterbyinput_de", "Filter by:",
+                         c("score" = "score",
+                           "number" = "number"),
+                         selected = c("score", "number"))),
+            column(2,sliderInput("range_de", "score threshold", min = -10, max = 10, 
+              value = c(-2,2), step = 0.01)),
+            column(1,sliderInput("numberthresleft_de", "Num +",
+              min = 0, max = 1000, value = 10, ticks = FALSE, step = 10)),
+            column(1,sliderInput("numberthresright_de", "Num -",
+              min = 0, max = 1000, value = 10, ticks = FALSE, step = 10))
+          ),
+          # Table returned bshowing description for query chemical
+          dataTableOutput("chemical_description_de"),
+          tags$style(type="text/css", '#chemical_description_de tfoot {display:none;}'),
+
+          ##insert empty space
+          fluidRow(column(width = 1, offset = 0, style='padding:10px;')),
+
+          # Table returned showing de markers
+          dataTableOutput("result_de")
         ),
-        # Table returned bshowing description for query chemical
-        dataTableOutput("chemical_description_de"),
-        tags$style(type="text/css", '#chemical_description_de tfoot {display:none;}'),
 
-        ##insert empty space
-        fluidRow(column(width = 1, offset = 0, style='padding:10px;')),
-
-        # Table returned showing de markers
-        dataTableOutput("result_de")
+        #search by gene
+        conditionalPanel(
+          condition = "input.detype == 'by gene'",
+          fluidRow(
+            column(3, selectInput("gene_de", "Gene symbol:", genes)),
+            column(3, textOutput("gene_de_lm"))
+          ),
+          tags$style(type='text/css', "#gene_de_lm { width:100%; margin-top: 25px;}"),
+          plotOutput("gene_de_hist"),
+          dataTableOutput("gene_de_table")
+        )
       )
     ),
 		
@@ -466,27 +518,40 @@ ui = shinyUI(
 
 server = shinyServer(function(input, output, session) {
 
-  output$chemannot_result<-DT::renderDataTable({
-    data.table.round(chemannot)
+  output$chemannot_result<-DT::renderDataTable({data.table.round(chemannot)},
+    extensions = 'Buttons', 
+    server = TRUE,
+    options = list(dom = 'T<"clear">Blfrtip', 
+    deferRender=FALSE, 
+    scrollX = TRUE,
+    scrollY = 400,
+    scrollCollapse = TRUE,
+    pageLength = 1000,
+    lengthMenu = c(10,50,100,200,1000),
+    buttons=c('copy','csv','print')))
+
+  output$gene_de_table<-renderDataTable({
+    data.table.round(get_de_by_gene_table(input$gene_de, deeset))
     },
-    extensions = 'Buttons',
-    server = FALSE,
-    options = list (dom = 'T<"clear">Blfrtip',
-      autoWidth = FALSE,
-      columnDefs = list(list(width = '100px', targets = list(2),
-          render = JS(
-            "function(data, type, row, meta) {",
-            "console.log(data);console.log(type);console.log(row);console.log(meta)",
-            "return type === 'display' && data.length > 40 ?",
-            "'<span title=\"' + data + '\">' + data.substr(0, 40) + '...</span>' : data;",
-            "}")), 
-      list(targets = list(1), visible = FALSE)
-      ),
-      deferRender=FALSE,
-      scrollX=TRUE,scrollY=400,
-      scrollCollapse=TRUE,
-      pageLength = 1000, lengthMenu = c(10,50,100,200,1000),
-      buttons=c('copy','csv','print')))
+    extensions = 'Buttons', 
+    server = TRUE,
+    options = list(dom = 'T<"clear">Blfrtip', 
+    deferRender=FALSE, 
+    scrollX = TRUE,
+    scrollY = 400,
+    scrollCollapse = TRUE,
+    pageLength = 1000,
+    lengthMenu = c(10,50,100,200,1000),
+    buttons=c('copy','csv','print'))
+   )
+
+  output$gene_de_hist<-renderPlot({
+    get_de_by_gene_hist(input$gene_de, deeset)
+    }, width = 1000, height = 300)
+
+  output$gene_de_lm<-renderText({
+    get_de_by_gene_lm(input$gene_de, deeset)
+    })
 
   output$gsproj_result <- DT::renderDataTable({
       eset<-get_gsproj(input$chemical_gs, gslist, chemannot, input$gsname_gs, input$gsmethod_gs)
@@ -519,14 +584,15 @@ server = shinyServer(function(input, output, session) {
 
     }, options = list(dom = ''))
 
-    output$chemical_description_gutc<-DT::renderDataTable({
+  output$chemical_description_gutc<-DT::renderDataTable({
     get_chemical_description(input = input$chemical_gutc, 
       tab = chemannot,
       cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final"))
 
     }, options = list(dom = ''))
 
-  output$result_de <- DT::renderDataTable({
+
+  output$result_de<-DT::renderDataTable({
       get_de(input$chemical_de, tab=chemannot, 
         eset = deeset, 
         landmark = input$landmark_de, 
@@ -535,13 +601,16 @@ server = shinyServer(function(input, output, session) {
         do.nmarkers = "number" %in% input$filterbyinput_de, 
         nmarkers = c(input$numberthresleft_de, input$numberthresright_de),
         summarize.func = input$summarizefunc_de)
-
-    }, 
+    },
     extensions = 'Buttons', 
-    server = FALSE,
+    server = TRUE,
     options = list(dom = 'T<"clear">Blfrtip', 
-    pageLength = 10,
     deferRender=FALSE, 
+    scrollX = TRUE,
+    scrollY = 400,
+    scrollCollapse = TRUE,
+    pageLength = 10,
+    lengthMenu = c(10,50,100,200,1000),
     buttons=c('copy','csv','print')))
 
   output$heatmap_result<-renderPlot({
@@ -610,31 +679,24 @@ server = shinyServer(function(input, output, session) {
         '">', '</iframe>'), sep = "")
       })
 
-   output$gutc_result <- DT::renderDataTable({
-       get_gutc(input = input$chemical_gutc, 
+  output$gutc_result<-DT::renderDataTable({
+      get_gutc(input = input$chemical_gutc, 
         tab = chemannot, 
         header = input$header_gutc, 
         datlist = gutcobjects,
         sort.by = input$summarize_gutc)
-     }, 
-    extensions = 'Buttons',
-    server = FALSE,
-    options = list (dom = 'T<"clear">Blfrtip',
-      autoWidth = FALSE,
-      columnDefs = list(list(width = '100px', targets = list(2),
-          render = JS(
-            "function(data, type, row, meta) {",
-            "console.log(data);console.log(type);console.log(row);console.log(meta)",
-            "return type === 'display' && data.length > 40 ?",
-            "'<span title=\"' + data + '\">' + data.substr(0, 40) + '...</span>' : data;",
-            "}")), 
-      list(targets = list(1), visible = TRUE)
-      ),
-      deferRender=FALSE,
-      scrollCollapse=TRUE,
-      pageLength = 10, lengthMenu = c(10,25,50),
-      buttons=c('copy','csv','print')
-   ))
+    },    
+    extensions = 'Buttons', 
+    server = TRUE,
+    options = list(dom = 'T<"clear">Blfrtip', 
+    deferRender=FALSE, 
+    scrollX = TRUE,
+    scrollY = 400,
+    scrollCollapse = TRUE,
+    pageLength = 50,
+    lengthMenu = c(10,50,100,200,1000),
+    buttons=c('copy','csv','print')))
+
 })
 
 )
