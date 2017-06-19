@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>The Carcinogenome Project</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+  <style>
+    /* Remove the navbar's default margin-bottom and rounded borders */ 
+    .navbar {
+      margin-bottom: 0;
+      border-radius: 0;
+    }
+
+    /* Override large button */ 
+    .btn-lg {
+      padding:20px 20px;
+      font-size:30px;
+      line-height:1.3333333;
+      border-radius:6px;
+      margin-right: 40px; 
+      margin-left: 40px;
+      background-color: #555555;
+      border: 2px solid grey;
+    }
+    .indented {   padding-left: 50pt;   padding-right: 50pt; } 
+    
+    /* Add a gray background color and some padding to the footer */
+    footer {
+      position:absolute;
+      bottom:0;
+      width:100%;
+      background-color: #f2f2f2;
+      padding: 15px;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>                        
+      </button>
+    </div>
+    <div class="collapse navbar-collapse" id="myNavbar">      
+      <ul class="nav navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link active" data-toggle="tab" href="#home" role ="tab">Home</a>
+        </li>
+        <li class="nav-item">
+          <a  data-toggle="tab" href="#about" role="tab">About</a>
+        </li>
+        <li class="nav-item">
+          <a  data-toggle="tab" href="#contact" role="tab">Contact</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="tab-content">
+
+<div id="home" class="tab-pane active" role="tabpanel">
+
+<div class="jumbotron">
+  <div class="container text-center">
+    <h1>The Carcinogenome Project</h1>      
+    <p>Chemical carcinogenicity screening using L1000 gene expression assays</p>
+  </div>
+</div>
+  
+<div class="container-fluid bg-3 text-center">    
+  <h3>Available Datasets</h3><br>
+    <div class="container-fluid bg-3 text-center" style="text-align:center;">
+    <a href="https://carcinogenome.org/HEPG2" class="btn btn-primary btn-lg" role="button">HEPG2</a>
+    <a href="https://carcinogenome.org/MCF10A" class="btn btn-primary btn-lg" role="button">MCF10A</a>
+    </div>
+</div>
+
+</div>
+
+<div id="about" class="tab-pane" role="tabpanel">
+ <div class="indented">
+    <h1> Motivation</h1>
+
+    Chemical exposures are known to play a large role in the cause of cancer. Some chemicals are well-known carcinogens. However, only a small fraction of chemicals with widespread exposure in the human population have undergone carcinogenicity testing. Furthermore, the biological mechanisms of actions of chemical carcinogens has not been extensively characterized. The current golden standard for chemical carcinogenicity testing is expensive and time-consuming as it requires a 2-year bioassay to test for presence of tumors following long-term chemical exposure. Up to date, about ~2000 chemicals have been tested for long-term carcinogenicity in rodent models in this way out of the ~80,000 chemicals used in common household products or industrial settings. We aim to develop a fast and scalable approach to carcinogenicity screening, one that takes advantage of short-term in-vitro chemical exposures on human cell lines and gene expression profiling using the cost-efficient and high-throughput L1000 gene expression assay. This approach allows the profiling of a large sample size of chemicals, including known carcinogens, non-carcinogens, and chemicals with suspected adverse effects. With these chemical exposure profiles, we can answer questions such as how well short-term in-vitro assays predict known long-term in-vivo carcinogenicity. 
+    <br><br>
+
+    <h1> Datasets </h1>
+
+    Currently, we have profiled two sets of chemicals in projects aimed at predicting liver carcinogenicity and breast carcinogenicity. The first set of chemicals is composed of known liver carcinogens (according to evidence of tumor growth in rat livers in the CPDB), non-carcinogens (not known to develop tumors in any sites in rats in the CPDB), and other chemicals of interest to our collaborators as part of the Superfund Research effort. These chemicals are exposured to HEPG2 (human liver cancer cell line) for 24H at 6 doses for each chemical. The second set of chemicals is composed of known breast carcinogens or suspected breast carcinogens (from CPDB or Rudel et. al, 2007.), known lung carcinogens, non-carcinogens, or collaborator selected chemicals. These chemicals are exposed to MCF10A (human non-transformed breast epithelial cell line) as well as MCF10A with P53 knock-down, and profiled the gene expression after 24 hours of exposure at 3 doses for each chemical. 
+
+
+
+</div>
+
+</div>
+
+<div id="contact" class="tab-pane" role="tabpanel">
+
+  <div class="indented">
+    <h1> Questions? Comments?</h1>
+    <br><br>
+    <a href="mailto:ajli@bu.edu">Email us</a><br><br><br>
+
+  This project is supported by Superfund Research Program at Boston University (<a href="http://www.bu.edu/sph/research/research-landing-page/superfund-research-program-at-boston-university">BUSRP</a>), <a href="http://www.lincsproject.org">NIH/LINCS</a>, and <a href="https://artbecause.org">Art beCAUSE Breast Cancer Foundation</a>. 
+  <br><br>
+  <img src="logo.png" style="width:1100px;height:150px;">
+
+  </div>
+
+</div>
+</div>
+
+<footer class="container-fluid text-center">
+  <p>The Carcinogenome Project: Developed by Monti Lab at Boston University
+    <br>
+    2017
+  </p>
+</footer>
+
+</body>
+</html>
