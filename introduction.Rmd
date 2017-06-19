@@ -1,12 +1,12 @@
 ---
-title: "CRCGN Liver Portal"
+title: "HEPG2 Liver Carcigenome Portal"
 output:
   html_document:
   toc: true
   theme: united
 ---
 
-An interactive portal for retrieving and visualizing data from the CRCGN liver project
+An interactive portal for retrieving and visualizing data from the HEGP2 liver carcinogenome project
 
 ### Dataset details
 
