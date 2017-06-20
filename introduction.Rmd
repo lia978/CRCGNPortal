@@ -10,19 +10,19 @@ An interactive portal for retrieving and visualizing data from the HEGP2 liver c
 
 ### Dataset details
 
-This experiment uses 330 selected chemicals for in-vivo liver carcinogenicity testing, including 128 liver carcinogens, 168 non-carcinogens, and 34 miscellaneous chemicals (e.g. nuclear receptor ligands). Chemical carcinogenicity and genotoxicity annotations are based on the Carcinogenicity Potency Database ([CPDB](https://toxnet.nlm.nih.gov/cpdb/)), which is the result of tissue-specific long-term animal cancer tests in rodents. In the CRCGN project, HepG2 (liver) cells are exposed to each individual chemical for 24 hours and the gene expression is profiled on the L1000 platform. Each chemical is assayed at 6 doses (2 fold dilutions starting from the highest concentration of 40uM or 20uM) with triplicate profiles generated for each dose. For each chemical and dose profile, the gene expression of 1000 landmark genes are measured as a moderated z-score (weighted collapsed z-score of the 3 replicate perturbational profiles with respect to the entire plate).
+This experiment uses 330 selected chemicals for in-vivo liver carcinogenicity testing, including 128 liver carcinogens, 168 non-carcinogens, and 34 miscellaneous chemicals (e.g. nuclear receptor ligands). Chemical carcinogenicity and genotoxicity annotations are based on the Carcinogenicity Potency Database ([CPDB](https://toxnet.nlm.nih.gov/cpdb/)), which is the result of tissue-specific long-term animal cancer tests in rodents. In the liver carcinogenome project, HepG2 (liver) cells are exposed to each individual chemical for 24 hours and their gene expression is profiled on the L1000 platform. Each chemical is assayed at 6 doses (2 fold dilutions starting from the highest concentration of 40uM or 20uM) with triplicate profiles generated for each dose. For each chemical and dose profile, the gene expression of 1000 landmark genes is calculated as a moderated z-score (weighted collapsed z-score of the 3 replicate perturbational profiles with respect to the entire plate).
 
 ### Chemical Annotation
 
-A table detailing the CRCGN liver chemicals and their associated annotation
+A table detailing the chemicals in the liver carcigenome project and their associated annotation.
 
 ### Differential Expression
 
-A list of differential expressed genes for a given chemical of interest
+A list of differentially expressed genes for a given chemical of interest.
 
 ### Gene set enrichment
 
-Gene set enrichment scores for a given chemical of interest. Gene sets include the [MSigDB](http://software.broadinstitute.org/gsea/msigdb) collections (Hallmark, C2 reactome pathways), and gene targets of various nuclear receptors ([NURSA](https://www.nursa.org/nursa/transcriptomine/index.jsf)).
+Gene set enrichment scores for a given chemical of interest. Gene sets include the [MSigDB](http://software.broadinstitute.org/gsea/msigdb) collections (Hallmark, C2 reactome pathways), and gene targets of various nuclear receptors ([NURSA](https://www.nursa.org/nursa/transcriptomine/index.jsf)). Enrichment scores were computed based on multiple methods, including gsva, ssGSEA, zscore (from R Bioconductor package, [GSVA](https://bioconductor.org/packages/release/bioc/html/GSVA.html)), and gsproj (custom script).
 
 ### Heatmap (interactive)
 
@@ -34,7 +34,7 @@ A static heatmap visualizer to explore gene set enrichment results, with option 
 
 ### Connectivity
 
-Summarizes the similarity of CRCGN liver profiles to profiles in the CMAP database (containing ~9000 unique annotated perturbagens, 84 perturbagen classes). Results are filtered top 50 (highest connectivity) and bottom 50 (lowest connectivity), representing the top hits for signature concordance and signature reversal respectively. 
+Summarizes the similarity of the L1000 liver cell line profiles of the carcinogenome project to profiles in the CMAP database (containing ~9000 unique annotated perturbagens, 84 perturbagen classes). Results are limited to the top 50 (highest connectivity) and bottom 50 (lowest connectivity), representing the top hits for signature concordance and signature reversal respectively. 
 
 
 ---
