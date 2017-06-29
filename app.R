@@ -314,7 +314,7 @@ dsmap<-list(Hallmark="gsscores_h.all.v5.0",
     NURSA="gsscores_nursa_consensome_Cbyfdrvalue_0.01.gmt")
 
 gctfiles<-names(dsmap)
-gctmethods<-c("gsproj", "gsva", "ssgsea", "zscore")
+gctmethods<-c("gsva", "ssgsea", "zscore", "gsproj")
 
 ##load data for GeneSetEnrichment tab
 gsnames<-dsmap
@@ -332,6 +332,12 @@ gutcobjects<-lapply(gutcfiles, function(i){
   })
 names(gutcobjects)<-gutcheaders
 
+gutch2<-c("ps_pcl_summary", "ps_pcl_cell", "ps_pert_summary", "ps_pert_cell")
+gutch2<-c(gutch2, setdiff(gutcheaders, gutch2))
+
+gutcobjects<-gutcobjects[gutch2]
+gutcheaders<-names(gutcobjects)
+
 #tooltip texts
 helptextgutc<-HTML(paste("cs: raw weighted connectivity scores",
               "ns: normalized scores, accounts for cell-line and perturbational type",
@@ -346,8 +352,9 @@ helptextgsname<-HTML(paste("Hallmark: MSigDB Hallmark Pathways (v5.0)",
               "NURSA: Nuclear Receptor Signaling Atlas, consensome data for human", 
                sep="<br/>"))
 
-helptextgsmethod<-HTML(paste("gsproj: GeneSetProjection for R package montilab:CBMRtools",
-              "gsva, ssgea, zscore: from R Bioconductor package GSVA", 
+helptextgsmethod<-HTML(paste(
+              "gsva, ssgea, zscore: from R Bioconductor package GSVA",
+              "gsproj: GeneSetProjection for R package montilab:CBMRtools", 
                sep="<br/>"))
 
 
