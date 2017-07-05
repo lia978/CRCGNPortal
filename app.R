@@ -519,7 +519,8 @@ ui = shinyUI(
          dataTableOutput("gutc_result")
 
        )
-     )
+     ), 
+    tabPanel(HTML("</a></li><li><a href=\"../\">Home"))
 
 	))),
 
