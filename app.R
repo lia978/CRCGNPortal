@@ -45,6 +45,60 @@ get_gutc<-function(input, tab, header, datlist, sort.by){
   return(tab)
 }
 
+
+radarplot_by_BUID<-function(dat, idvalue, id = "BUID"){
+
+  inds<-which(pData(dat)[, id] %in% idvalue)
+  df<-data.frame(t(exprs(dat[, inds])))
+
+  rowlabs<-as.character(apply(pData(dat)[inds,c("Chemical.name", "pert_idose")], 
+    1, function(i) paste(i, collapse = " ")))
+
+  rowlabs2<-as.character(apply(pData(dat)[inds,c("Chemical.name", "pert_dose_RANK")], 
+    1, function(i) paste(i, collapse = " ")))
+
+  rownames(df)<-rowlabs2
+  df$labs<-rowlabs
+  df$labs2<-rowlabs2
+
+  dfm<-melt(df)
+  dfm$value[dfm$value<0]<-0
+  dfm$direction<-"positive"
+
+  dfm2<-melt(df)
+  dfm2$value<- (-1*dfm2$value)
+  dfm2$value[dfm2$value<0]<-0
+  dfm2$direction<-"negative"
+
+  dfm<-rbind(dfm, dfm2)
+
+  vals<-c("red", "blue")
+  names(vals)<-c("positive", "negative")
+
+  lab_names<-mapply(function(x,y) { y }, dfm$labs2, dfm$labs, SIMPLIFY = FALSE,USE.NAMES = TRUE)
+
+
+  labeller <- function(variable,value){
+      return(lab_names[value])
+  }
+  p<- dfm %>%
+   ggplot(aes(x=variable, y=value, group=direction, color=direction, label = variable))+
+   scale_colour_manual(values = vals)+ 
+   geom_polygon(fill=NA) + 
+   coord_polar() + theme_bw() + facet_wrap(~ labs2, labeller=labeller) + 
+   theme(axis.text.x = element_text(size = 8)) +
+   xlab("")+ylab("")+
+  scale_x_discrete( breaks=as.character(dfm$variable),
+    labels=sapply(as.character(dfm$variable), 
+      function(i) paste( strsplit(i, "\\.")[[1]], collapse = "\n")))
+  p
+}
+
+get_moa<-function(input, tab){
+  i<-get_BUID(input, tab)
+  radarplot_by_BUID(dat = moa_data, idvalue = i, id = "BUID")
+}
+
 capitalize <- function(x) {
   s <- strsplit(x, " ")[[1]]
   paste(toupper(substring(s, 1,1)), substring(s, 2),
@@ -71,7 +125,9 @@ clean_gutc<-function(tab, col){
 
 get_chemical_description<-function(input, 
   tab,
-  cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final")){
+  cols.keep = c("BUID", "Chemical Name", "CAS", "Carcinogenicity", "Mean Signal Strength")
+  #cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final")
+  ){
   i<-get_BUID(input, tab)
   res<-tab[tab$BUID %in% i, cols.keep]
   return(data.table.round(res[1,]))
@@ -95,7 +151,10 @@ get_BUID<-function(input, tab){
   as.character(tab[which(apply(tab, 1, function(i) any(i %in% input)))[1], "BUID"])
 }
 
-get_ids_pdat<-function(pdat, cols = c("Chemical.name", "CAS", "BUID"), col.unique = "BUID",
+get_ids_pdat<-function(pdat, 
+  #cols = c("Chemical.name", "CAS", "BUID"), 
+  cols = c("BUID", "Chemical Name", "CAS"),
+  col.unique = "BUID",
   val.ignore = c("", " ", NA, "NA", "NOCAS")){
   tab<-unique(pdat[, cols])
   res<-lapply(cols, function(i){
@@ -114,7 +173,8 @@ summarize_gsproj<-function(eset, order.col = "median"){
   mat<-exprs(eset)
   colnames(mat)<-paste("gsscore_",pData(eset)$pert_idose, sep = "")
 
-  res<-cbind(rowIDs = rownames(res), fData(eset), summaryscore = res[,order.col], mat)
+  res<-cbind(#rowIDs = rownames(res), 
+    fData(eset), summaryscore = res[,order.col], mat)
   res<-res[order(res$summaryscore, decreasing = TRUE),, drop = FALSE]
   res<-data.table.round(res)
   return(res)
@@ -183,6 +243,7 @@ get_de_by_gene_table<-function(input, eset){
     x<-as.numeric(exprs(eset)[rowid,])
     pdat<-pData(eset)
     cols<-c("sig_id", "Chemical.name", "CAS", "pert_idose", "pert_dose_RANK", "distil_ss", "distil_ss_RANK")
+   
     df<-cbind(pdat[, cols], modz = x)
     df<-df[order(df$modz, decreasing = TRUE),]
 }
@@ -273,11 +334,27 @@ data.table.round<-function(dt, digits = 4){
   dt<-data.table(dt)
 }
 
+get_genecard_link<-function(genesymbol){
+  sprintf('<a href="http://www.genecards.org/cgi-bin/carddisp.pl?gene=%s&keywords=%s" target="_blank" class="btn btn-primary">%s</a>',
+    genesymbol, genesymbol, genesymbol)
+}
+
+get_geneset_link<-function(geneset){
+  sprintf('<a href="http://software.broadinstitute.org/gsea/msigdb/cards/%s" target="_blank" class="btn btn-primary">%s</a>',
+    geneset, geneset)
+
+}
+
 ##load data dirs
 dirs<-fromJSON(file = "datadirs.json")
 
 ##load data for chemical annotation tab
 chemannot<-readRDS(file = dirs$chemannotation_filename)
+
+##clean colnames
+colnames(chemannot)<-c("BUID", "Chemical Name", "CAS", "Carcinogenicity", "Source", "Broad ID", "Mean Signal Strength")
+
+chemannot<-chemannot[, c("Chemical Name", "CAS", "Mean Signal Strength", "Carcinogenicity", "BUID", "Broad ID", "Source")]
 
 ##load data for Differential Expression tab
 deeset<-readRDS(dirs$diffexp_filename)
@@ -370,6 +447,10 @@ selectInputWithTooltip<-function(inputId, label, choices, bId, helptext, ...){
             tipify(bsButton(bId, "?", style = "inverse", size = "extra-small"), 
               helptext)),
              choices, ...)}
+
+##moa data
+moa_data<-readRDS(dirs$moa_dir)
+
 
 ##define app
 app<-shinyApp(
@@ -520,6 +601,21 @@ ui = shinyUI(
 
        )
      ), 
+
+
+     ##TODO MOA tab
+
+     tabPanel("MOA", 
+      fluidPage(
+        fluidRow(
+            column(3, selectInput("chemical_moa", "CRCGN Chemical:", chemicals))
+            
+          ),
+        plotOutput("moa_result")
+
+        )
+      ),
+
     tabPanel(HTML("</a></li><li><a href=\"../\">Home"))
 
 	))),
@@ -562,46 +658,58 @@ server = shinyServer(function(input, output, session) {
     })
 
   output$gsproj_result <- DT::renderDataTable({
-      eset<-get_gsproj(input$chemical_gs, gslist, chemannot, input$gsname_gs, input$gsmethod_gs)
+      currgsname<-input$gsname_gs
+      eset<-get_gsproj(input$chemical_gs, gslist, chemannot, currgsname, input$gsmethod_gs)
       res<-summarize_gsproj(eset, order.col = input$summarize_gs)
+      
+      #return hyperlink to MSigDB genesets
+      if(currgsname %in% c("Hallmark", "C2"))
+        res$genesets<-sapply(as.character(res$genesets), get_geneset_link)
       return(res)
     }, 
+    escape = FALSE,
     extensions = 'Buttons',
-    server = FALSE,
-    options = list (dom = 'T<"clear">Blfrtip',
-      autoWidth = FALSE,
-      columnDefs = list(list(width = '100px', targets = list(2), className = 'dt-center',
-          render = JS(
-            "function(data, type, row, meta) {",
-            "return type === 'display' && data.length > 30 ?",
-            "'<span title=\"' + data + '\">' + data.substr(0, 30) + '..</span>' : data;",
-            "}")), 
-      list(targets = list(1), visible = FALSE)
-      ),
-      deferRender=TRUE,
-      scrollCollapse=TRUE,
-      pageLength = 10, lengthMenu = c(10,50,100,200,1000),
-      buttons=c('copy','csv','print')
-    )
+    server = FALSE#,
+    # options = list (dom = 'T<"clear">Blfrtip',
+    #   autoWidth = FALSE,
+    #   columnDefs = list(list(width = '100px', targets = list(2), className = 'dt-center',
+    #       render = JS(
+    #         "function(data, type, row, meta) {",
+    #         "return type === 'display' && data.length > 30 ?",
+    #         "'<span title=\"' + data + '\">' + data.substr(0, 30) + '..</span>' : data;",
+    #         "}")), 
+    #   list(targets = list(1), visible = FALSE)
+    #   ),
+    #   deferRender=TRUE,
+    #   scrollCollapse=TRUE,
+    #   pageLength = 10, lengthMenu = c(10,50,100,200,1000),
+    #   buttons=c('copy','csv','print')
+    # )
   )
 
   output$chemical_description_de<-DT::renderDataTable({
     get_chemical_description(input = input$chemical_de, 
       tab = chemannot,
-      cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final"))
+      #cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final")
+      cols.keep = c("BUID", "Chemical Name", "CAS", "Broad ID", "Carcinogenicity")
+
+      )
 
     }, options = list(dom = ''))
 
   output$chemical_description_gutc<-DT::renderDataTable({
     get_chemical_description(input = input$chemical_gutc, 
       tab = chemannot,
-      cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final"))
+      #cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final")
+      cols.keep = c("BUID", "Chemical Name", "CAS", "Broad ID", "Carcinogenicity")
+
+      )
 
     }, options = list(dom = ''))
 
 
   output$result_de<-DT::renderDataTable({
-      get_de(input$chemical_de, tab=chemannot, 
+      de_table<-get_de(input$chemical_de, tab=chemannot, 
         eset = deeset, 
         landmark = input$landmark_de, 
         do.scorecutoff = "score" %in% input$filterbyinput_de, 
@@ -609,7 +717,10 @@ server = shinyServer(function(input, output, session) {
         do.nmarkers = "number" %in% input$filterbyinput_de, 
         nmarkers = c(input$numberthresleft_de, input$numberthresright_de),
         summarize.func = input$summarizefunc_de)
+      de_table$pr_gene_symbol<-sapply(as.character(de_table$pr_gene_symbol), get_genecard_link)
+      return(de_table)
     },
+    escape = FALSE,
     extensions = 'Buttons', 
     server = TRUE,
     options = list(dom = 'T<"clear">Blfrtip', 
@@ -704,6 +815,10 @@ server = shinyServer(function(input, output, session) {
     pageLength = 50,
     lengthMenu = c(10,50,100,200,1000),
     buttons=c('copy','csv','print')))
+
+  output$moa_result<-renderPlot({
+    get_moa(input = input$chemical_moa, tab = chemannot)
+    }, width = 1000, height = 600)
 
 })
 
