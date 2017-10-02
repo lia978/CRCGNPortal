@@ -450,7 +450,7 @@ selectInputWithTooltip<-function(inputId, label, choices, bId, helptext, ...){
 
 ##moa data
 moa_data<-readRDS(dirs$moa_dir)
-
+exprs(moa_data)<-t(apply(exprs(moa_data), 1, scale))
 
 ##define app
 app<-shinyApp(
