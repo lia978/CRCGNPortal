@@ -152,8 +152,8 @@ get_BUID<-function(input, tab){
 }
 
 get_ids_pdat<-function(pdat, 
-  #cols = c("Chemical.name", "CAS", "BUID"), 
-  cols = c("BUID", "Chemical Name", "CAS"),
+  cols = c("Chemical Name", "CAS", "BUID"), 
+  #cols = c("BUID", "Chemical Name", "CAS"),
   col.unique = "BUID",
   val.ignore = c("", " ", NA, "NA", "NOCAS")){
   tab<-unique(pdat[, cols])
@@ -354,7 +354,7 @@ chemannot<-readRDS(file = dirs$chemannotation_filename)
 ##clean colnames
 colnames(chemannot)<-c("BUID", "Chemical Name", "CAS", "Carcinogenicity", "Source", "Broad ID", "Mean Signal Strength")
 
-chemannot<-chemannot[, c("Chemical Name", "CAS", "Mean Signal Strength", "Carcinogenicity", "BUID", "Broad ID", "Source")]
+chemannot<-chemannot[, c("BUID", "Chemical Name", "CAS", "Carcinogenicity", "Mean Signal Strength", "Broad ID", "Source")]
 
 ##load data for Differential Expression tab
 deeset<-readRDS(dirs$diffexp_filename)
@@ -690,7 +690,6 @@ server = shinyServer(function(input, output, session) {
   output$chemical_description_de<-DT::renderDataTable({
     get_chemical_description(input = input$chemical_de, 
       tab = chemannot,
-      #cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final")
       cols.keep = c("BUID", "Chemical Name", "CAS", "Broad ID", "Carcinogenicity")
 
       )
@@ -699,8 +698,7 @@ server = shinyServer(function(input, output, session) {
 
   output$chemical_description_gutc<-DT::renderDataTable({
     get_chemical_description(input = input$chemical_gutc, 
-      tab = chemannot,
-      #cols.keep = c("BUID", "Chemical.name", "CAS", "Broad_external_Id", "carc_liv_final")
+      tab = chemannot,    
       cols.keep = c("BUID", "Chemical Name", "CAS", "Broad ID", "Carcinogenicity")
 
       )
@@ -718,6 +716,12 @@ server = shinyServer(function(input, output, session) {
         nmarkers = c(input$numberthresleft_de, input$numberthresright_de),
         summarize.func = input$summarizefunc_de)
       de_table$pr_gene_symbol<-sapply(as.character(de_table$pr_gene_symbol), get_genecard_link)
+      cn<-colnames(de_table)
+      cn[cn %in% "id"]<-"Affy ID"
+      cn[cn %in% "pr_gene_symbol"]<-"Gene Symbol"
+      cn[cn %in% "pr_is_lmark"]<-"Is Landmark Gene"
+      cn[cn %in% "summaryscore"]<-"Summary Mod-Zscore"
+      colnames(de_table)<-cn
       return(de_table)
     },
     escape = FALSE,
